@@ -1,0 +1,62 @@
+.task-card {
+  transition: opacity 0.3s ease, transform 0.3s ease, box-shadow 0.2s ease;
+}
+
+
+.task-completed .task-title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.task-overdue {
+  border-left: 4px solid var(--bs-danger);
+}
+
+.fade-out {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.navbar {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+
+.task-card {
+  border-top: 4px solid transparent;
+  border-radius: 0.5rem;
+}
+
+
+
+.task-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+
+#buscarInput:focus,
+.form-select:focus {
+  box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.15);
+}
+#tabsStatus .nav-link {
+  color: #495057;
+}
+
+#tabsStatus .nav-link.active {
+  background-color: #0d6efd;
+  color: white;
+}
+
+main > .card {
+  border: none;
+  background-color: #ffffff;
+}
+
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: #f4f6f9;
+}

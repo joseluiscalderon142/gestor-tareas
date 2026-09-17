@@ -10,13 +10,13 @@ function crearTareaObjeto({ titulo, descripcion, prioridad, categoria, fechaLimi
     prioridad,
     categoria,
     fechaLimite: fechaLimite || "",
-    completada: false,
+    estado: "pendiente",
     creadaEn: new Date().toISOString()
     };
 }
 
 function estaVencida(tarea){
-    if ( tarea.completada || !tarea.fechaLimite) return false;
+    if ( tarea.estado === "completada" || !tarea.fechaLimite) return false;
     const hoy = new Date().toISOString().split("T")[0];
     return tarea.fechaLimite < hoy;
 
@@ -37,12 +37,11 @@ function crearTarjeta(tarea){
     const clases = [
         "task-card", "card", "h-100",
         `prioridad-${tarea.prioridad}`,
-        tarea.completada ? "task-completed" : "",
+        tarea.estado === "completada" ? "task-completed" : "",
         vencida ? "task-overdue" : ""
     ].join(" ");
     return `
-    <div class="col-md-6 col-lg-4" data-id="${tarea.id}">
-      <div class="${clases}">
+    <div class="${clases}" draggable="true" data-id="${tarea.id}">
         <div class="card-body">
           <div class="d-flex justify-content-between align-items-start">
             <h5 class="task-title card-title">${tarea.titulo}</h5>
@@ -57,10 +56,15 @@ function crearTarjeta(tarea){
             </small>
           </div>
           <div class="d-flex gap-2">
-          <button class="btn btn-sm btn-outline-success btn-toggle" data-id="${tarea.id}">
-          <i class="bi ${tarea.completada ? 'bi-arrow-counterclockwise' : 'bi-check-lg'}"></i>
-        ${tarea.completada ? "Reabrir" : "Completar"}
+
+      <button class="btn btn-sm btn-outline-secondary btn-mover-atras d-md-none" data-id="${tarea.id}">
+        <i class="bi bi-arrow-left"></i>
       </button>
+      <button class="btn btn-sm btn-outline-secondary btn-mover-adelante d-md-none" data-id="${tarea.id}">
+        <i class="bi bi-arrow-right"></i>
+      </button>
+          
+         
       <button class="btn btn-sm btn-outline-primary btn-editar" data-id="${tarea.id}">
         <i class="bi bi-pencil"></i> Editar
       </button>
@@ -68,8 +72,9 @@ function crearTarjeta(tarea){
         <i class="bi bi-trash"></i> Eliminar
       </button>
 
+
           </div>
-        </div>
+        
       </div>
     </div>
     `
@@ -84,19 +89,22 @@ function render(){
 
     actualizarContadores();
 
-    const contenedor = document.getElementById("taskList");
     const mensajeVacio = document.getElementById("emptyMessage");
 
     const tareasFiltradas = aplicarFiltros(tareas);
-
+    const contenedor = document.querySelectorAll(".kanban-cards");
 
     if (tareasFiltradas.length === 0){
-        contenedor.innerHTML = "";
-        mensajeVacio.classList.remove("d-none");
-        return;
-    }
+    contenedor.forEach(col => col.innerHTML = "");
+    mensajeVacio.classList.remove("d-none");
+    return;
+}
     mensajeVacio.classList.add("d-none");
-    contenedor.innerHTML = tareasFiltradas.map(crearTarjeta).join("");
+
+    contenedor.forEach(col => {
+    const tareasCol = tareasFiltradas.filter(t => t.estado === col.dataset.status);
+    col.innerHTML = tareasCol.map(crearTarjeta).join("");
+});
 }
 
 
@@ -151,9 +159,9 @@ taskForm.addEventListener("submit", function(e){
 
 });
 
-const taskList = document.getElementById("taskList");
+const kanbanBoard = document.getElementById("kanbanBoard");
 
-taskList.addEventListener("click", function (e) {
+kanbanBoard.addEventListener("click", function (e) {
   const btnEditar = e.target.closest(".btn-editar");
   if (!btnEditar) return;
 
@@ -173,7 +181,7 @@ taskList.addEventListener("click", function (e) {
   modal.show();
 });
 
-taskList.addEventListener("click", function(e) {
+kanbanBoard.addEventListener("click", function(e) {
     const btnEliminar = e.target.closest(".btn-eliminar");
     if( !btnEliminar ) return;
 
@@ -196,28 +204,35 @@ document.getElementById("confirmDeleteBtn").addEventListener("click", function (
 });
 
 
-taskList.addEventListener("click", function (e){
-    const btnToggle = e.target.closest(".btn-toggle");
-    if (!btnToggle) return;
+const ORDEN_ESTADOS = ["pendiente", "progreso", "completada"];
 
-    const id = btnToggle.dataset.id;
-    const tarea = tareas.find(t => t.id === id);
-    if(!tarea) return;
+kanbanBoard.addEventListener("click", function(e){
+  const btnAtras = e.target.closest(".btn-mover-atras");
+  const btnAdelante = e.target.closest(".btn-mover-adelante");
+  if (!btnAtras && !btnAdelante) return;
 
-    tarea.completada = !tarea.completada;
-    guardarTareas();
-    render();
-} );
+  const id = (btnAtras || btnAdelante).dataset.id;
+  const tarea = tareas.find(t => t.id === id);
+  if (!tarea) return;
+
+  const indiceActual = ORDEN_ESTADOS.indexOf(tarea.estado);
+  const nuevoIndice = indiceActual + (btnAdelante ? 1 : -1);
+
+  if (nuevoIndice < 0 || nuevoIndice >= ORDEN_ESTADOS.length) return;
+
+  tarea.estado = ORDEN_ESTADOS[nuevoIndice];
+  guardarTareas();
+  render();
+});
+
+
 
 function aplicarFiltros(lista) {
-  const estado = document.querySelector("#tabsStatus .active").dataset.status;
   const prioridad = document.getElementById("filtroPrioridad").value;
   const categoria = document.getElementById("filtroCategoria").value;
   const busqueda = document.getElementById("buscarInput").value.trim().toLowerCase();
 
   return lista.filter(tarea => {
-    if (estado === "Pendientes" && tarea.completada) return false;
-    if (estado === "Completadas" && !tarea.completada) return false;
     if (prioridad && tarea.prioridad !== prioridad) return false;
     if (categoria && tarea.categoria !== categoria) return false;
     if (busqueda && !tarea.titulo.toLowerCase().includes(busqueda)) return false;
@@ -226,17 +241,7 @@ function aplicarFiltros(lista) {
 }
 
 
-const tabsStatus = document.getElementById("tabsStatus");
 
-tabsStatus.addEventListener("click", function (e) {
-  const btn = e.target.closest(".nav-link");
-  if (!btn) return;
-
-  tabsStatus.querySelectorAll(".nav-link").forEach(b => b.classList.remove("active"));
-  btn.classList.add("active");
-
-  render();
-});
 
 document.getElementById("filtroPrioridad").addEventListener("change", render);
 document.getElementById("filtroCategoria").addEventListener("change", render);
@@ -247,12 +252,40 @@ document.getElementById("filtroCategoria").addEventListener("change", render);
 document.getElementById("buscarInput").addEventListener("input", render);
 
 function actualizarContadores() {
-  const pendientes = tareas.filter(t => !t.completada).length;
-  const completadas = tareas.filter(t => t.completada).length;
+  const pendientes = tareas.filter(t => t.estado === "pendiente").length;
+  const enProgreso = tareas.filter( t => t.estado === "progreso").length;
+  const completadas = tareas.filter(t => t.estado === "completada").length;
 
   document.getElementById("contPendientes").textContent = `Pendientes: ${pendientes}`;
+  document.getElementById("contEnProgreso").textContent = `En Progreso: ${enProgreso}`;
   document.getElementById("contCompletadas").textContent = `Completadas: ${completadas}`;
 }
+
+
+kanbanBoard.addEventListener("dragstart", function(e){
+  const tarjeta = e.target.closest(".task-card");
+  if(!tarjeta) return;
+  e.dataTransfer.setData("text/plain", tarjeta.dataset.id);
+});
+
+kanbanBoard.addEventListener("dragover", function(e){
+  const col = e.target.closest(".kanban-cards");
+  if(!col) return;
+  e.preventDefault();
+});
+
+kanbanBoard.addEventListener("drop", function(e){
+  const col = e.target.closest(".kanban-cards");
+  if(!col) return;
+  e.preventDefault();
+  const id = e.dataTransfer.getData("text/plain");
+  const tarea = tareas.find(t => t.id === id);
+  if(!tarea) return;
+  tarea.estado = col.dataset.status;
+  guardarTareas();
+  render();
+});
+
 
 cargarTareas();
 render();

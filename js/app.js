@@ -55,7 +55,7 @@ function crearTarjeta(tarea){
               ${vencida ? " (Vencida)" : ""}
             </small>
           </div>
-          <div class="d-flex gap-2">
+          <div class="d-flex flex-wrap gap-2">
 
       <button class="btn btn-sm btn-outline-secondary btn-mover-atras d-md-none" data-id="${tarea.id}">
         <i class="bi bi-arrow-left"></i>
